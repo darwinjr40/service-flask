@@ -12,15 +12,24 @@ import face_recognition as fr
 import os
 from datetime import datetime
 
-example_bp = Blueprint('example', __name__)
+service_bp = Blueprint('service', __name__)
 
 # Definir la vista "inicio"
-@example_bp.route('/example')
+@service_bp.route('/')
+def inicio():
+    return render_template('prueba22.html')
+
+@service_bp.route('/buscar')
+def buscar():
+    return render_template('buscar.html')
+
+
+@service_bp.route('/example')
 def example():
     # return render_template('inicio.html')
     return 'nise123'
 
-@example_bp.route('/process_image', methods=['POST'])
+@service_bp.route('/process_image', methods=['POST'])
 def process_image():
     try:
 #     # Código que puede lanzar una excepción
@@ -59,7 +68,7 @@ def process_image():
 
 
 
-@example_bp.route('/process', methods=['POST'])
+@service_bp.route('/process', methods=['POST'])
 def process():
     try:
         # # Accedemos a la carpeta
@@ -102,15 +111,17 @@ def process():
         
         frame = img_array
         #Reducimos las imagenes para mejor procesamiento
-        #frame2 = cv2.resize(frame, (500,500), None, 0.25, 0.25)
-        frame2 = cv2.resize(frame, (0,0), None, 0.01, 0.01)
+        # frame2 = cv2.resize(frame, (0,0), None, 1, 1)
+        frame2 = cv2.resize(frame, (0,0), None, 0.25, 0.25)
         #Conversion de color
         rgb = cv2.cvtColor(frame2, cv2.COLOR_BGR2RGB)
         # rgb = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
         #BUScano5 los rostros
         faces  = fr.face_locations(rgb)
-        print(len(faces))
+        # print(len(faces))
+        # return str(len(faces))
+        # return  jsonify({'result': len(faces)})  
         facescod = fr.face_encodings(rgb, faces)
         # print(facescod)
         # Iteranos
@@ -131,11 +142,13 @@ def process():
                 nombre = clases[min].upper()
                 print(nombre)
                 #EXtraenos coordenadas
+                print(faceloc)
                 yi, xf, yf, xi = faceloc
                 #Escalanos
-                yi, xf, yf, xi = yi*4, xf*4, yf*4, xi*4
+                # yi, xf, yf, xi = yi*4, xf*4, yf*4, xi*4
+                yi, xf, yf, xi = yi, xf*2, yf*2, xi
                 indice = comparacion.index(True)
-
+# https://meet.google.com/iuq-ryii-uze
                 # Comparanos
                 if comp1 != indice:
                     #Para dibujar canbianos colores
