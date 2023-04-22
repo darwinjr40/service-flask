@@ -14,6 +14,7 @@ from datetime import datetime
 
 service_bp = Blueprint('service', __name__)
 
+#service socket ------------------------------------------------
 # Definir la vista "inicio"
 @service_bp.route('/')
 def inicio():
@@ -23,7 +24,11 @@ def inicio():
 def buscar():
     return render_template('buscar.html')
 
+@service_bp.route('/webrtc')
+def webrtc():
+    return render_template('webrtc.html')
 
+#services ------------------------------------------------
 @service_bp.route('/example')
 def example():
     # return render_template('inicio.html')

@@ -53,7 +53,7 @@ init()
 rostroscod = codrostros(images)
 print('xd')
 print(rostroscod)
-comp1 = 100
+
 
 socketio = SocketIO()
 
@@ -70,18 +70,58 @@ def event(json):
     print("te estan saludando desde el cliente:" + json)
     json = json + ' desde el server'
     emit('event',json)
-
+#webrtc------------------------------
+@socketio.on('webrtc')
+def webrtc(stream):
+    try:
+        img_bytes = base64.b64decode(stream)        
+        nparr = np.frombuffer(img_bytes, np.uint8)    
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)  
+        frame = get_frame_comparation(frame)
+        encoded_string = base64.b64encode(cv2.imencode('.jpg', frame)[1]).decode()          
+        emit('processed_webrtc', encoded_string)
+        
+    except Exception as e:    
+        print({'result': 'errors', 'type': f"Tipo de excepción: {type(e)}", 'errors': f"Mensaje de error: {e}"})
+        # return jsonify({'result': 'errors', 'type': f"Tipo de excepción: {type(e)}", 'errors': f"Mensaje de error: {e}"})  
+    
+def get_frame_comparation(frame):
+    global  clases, rostroscod
+    # Procesar la imagen con OpenCV
+    frame2 = cv2.resize(frame, (0,0), None, 0.25, 0.25)
+    #Conversion de color
+    rgb = cv2.cvtColor(frame2, cv2.COLOR_BGR2RGB)
+    # rgb = cv2.cvtColor(frame2, cv2.COLOR_RGB2GRAY)
+    #identificar posibles rostros
+    faces  = fr.face_locations(rgb)
+    facescod = fr.face_encodings(rgb, faces)
+    print(faces)    
+    for facecod, faceloc in zip(facescod, faces) :
+        #Comparamos rostros de DB con rostro en tiempo real
+        comparaciones = fr.compare_faces(rostroscod, facecod, 0.62)
+        print(comparaciones)        
+        simi = fr.face_distance(rostroscod, facecod)        
+        #BUScanos el valor mas bajo, retorna el indice
+        min = np.argmin(simi)        
+        if comparaciones[min]:
+            yi, xf, yf, xi = faceloc
+            #Escalanos
+            yi, xf, yf, xi = yi*4, xf*4, yf*4, xi*4                                
+            cv2.rectangle(frame, (xi, yi), (xf, yf), (100, 500, 100), 3)                                       
+            nombreFile = clases[min].upper()            
+            cv2.putText(frame, nombreFile, (xi+6, yi-6), cv2.FONT_HERSHEY_SIMPLEX, 1, (100, 500, 100), 2)
+            break
+    return frame 
+   
 #buscar  faces of db---------------------------------------------------------
 @socketio.on('buscarFaces')
 def buscar_faces(stream):
-    global comp1, images, clases, rostroscod
+    global  images, clases, rostroscod
     
     img_bytes = base64.b64decode(stream.split(',')[1])
     nparr = np.frombuffer(img_bytes, np.uint8)
-    # nparr = np.fromstring(img_bytes, np.uint8)
-    
-    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    
+    # nparr = np.fromstring(img_bytes, np.uint8)    
+    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)    
     
     # # Procesar la imagen con OpenCV
     frame2 = cv2.resize(frame, (0,0), None, 0.25, 0.25)
@@ -92,9 +132,7 @@ def buscar_faces(stream):
     faces  = fr.face_locations(rgb)
     facescod = fr.face_encodings(rgb, faces)
     print(faces)
-    
-    
-    
+    comp1 = 100
     # Iteranos
     for facecod, faceloc in zip(facescod, faces) :
         #Comparamos rostros de DB con rostro en tiempo real
@@ -106,38 +144,38 @@ def buscar_faces(stream):
 
         #BUScanos el valor mas bajo, retorna el indice
         min = np.argmin(simi)
-        
+        print(comp1)
         if comparacion[min]:
-            nombre = clases[min].upper()
-            print('nomre: ', nombre)
+            # print('nomre: ', nombre)
             #EXtraenos coordenadas
             yi, xf, yf, xi = faceloc
             #Escalanos
             yi, xf, yf, xi = yi*4, xf*4, yf*4, xi*4
             indice = comparacion.index(True)
-            print('encontro------: ', nombre)
+            # print('encontro------: ', nombre)
 
             # Comparanos
             if comp1 != indice:
+                nombre = clases[min].upper()
+                
                 #Para dibujar canbianos colores
-                r = random.randrange(0, 255, 50)
-                g = random.randrange(0, 255, 50)
-                b = random.randrange(0, 255, 50)
+                # r = random.randrange(0, 255, 50)
+                # g = random.randrange(0, 255, 50)
+                # b = random.randrange(0, 255, 50)
                 comp1 = indice
-
-            if comp1 == indice:
-                # cv2.rectangle(frame, (xi, yi), (xf, yf), (r, g, b), 3)
-                # cv2.rectangle(frame, (1, 1), (2, 2), (r, g, b), 3)                
-                # cv2.putText(frame, nombre, (xi+6, yi-6), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                # print('comp1 == indice:')
+                cv2.rectangle(frame, (xi, yi), (xf, yf), (100, 500, 100), 3)                           
+                # cv2.rectangle(frame, (xi, yi), (xf, yf), (r, g, b), 3)                           
+                cv2.putText(frame, nombre, (xi+6, yi-6), cv2.FONT_HERSHEY_SIMPLEX, 1, (100, 500, 100), 2)
                 break
-    
-    
+                    
     encoded_string = base64.b64encode(cv2.imencode('.jpg', frame)[1]).decode()          
     # _, buffer = cv2.imencode('.jpg', img)
     # edges_b64 = base64.b64encode(buffer)
     # # Convertir la cadena de bytes a una cadena de texto
     # encoded_string = edges_b64.decode('utf-8')
     # # print(stream)
+    print('fin de server')
     emit('processed_buscar_faces', encoded_string)
     
     
